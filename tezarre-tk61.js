@@ -26,7 +26,7 @@ export function Initialize() {
 export function Render() {
 	device.log("🎨 Render ciclo iniciado");
 	sendColors();
-	device.pause(50); // Aumentar pausa para evitar saturar el bus
+	device.pause(200); // Pausa más larga para facilitar debugging
 }
 
 export function Shutdown(SystemSuspending) {
@@ -63,43 +63,57 @@ function sendColors(overrideColor) {
 		return;
 	}
 
+	device.log(`📦 Preparando envío - Longitud: ${packet.length}`);
+	device.log(`📦 Datos: [${packet.join(", ")}]`);
+	
+	// Método 1: device.write con array directo (más común en SignalRGB)
 	try {
-		device.log(`📦 Preparando envío HID - Longitud: ${packet.length}`);
-		device.log(`📦 Datos: [${packet.join(", ")}]`);
-
-		// Método 1: Feature Report
-		device.sendFeatureReport(packet, packet.length);
-		device.log(`📤 Feature Report enviado exitosamente`);
-
+		device.write(packet, packet.length);
+		device.log(`📤 Paquete enviado exitosamente (array + length)`);
+		return; // Si funciona, salir aquí
 	} catch (err) {
-		device.log("❌ Error al enviar Feature Report: " + err.message);
-
-		// Método 2: Output Report
-		try {
-			device.sendOutputReport(packet, packet.length);
-			device.log(`📤 Output Report enviado exitosamente (fallback)`);
-		} catch (err2) {
-			device.log("❌ Error al enviar Output Report: " + err2.message);
-
-			// Método 3: Probar con Report ID al principio
-			try {
-				let packetWithReportId = [0x00, ...packet]; // Report ID 0x00
-				device.sendFeatureReport(packetWithReportId, packetWithReportId.length);
-				device.log(`📤 Feature Report con Report ID enviado exitosamente`);
-			} catch (err3) {
-				device.log("❌ Error con Report ID: " + err3.message);
-
-				// Método 4: Último fallback con write tradicional
-				try {
-					let buffer = new Uint8Array(packet);
-					device.write(0x00, buffer);
-					device.log(`📤 Write tradicional exitoso (último fallback)`);
-				} catch (err4) {
-					device.log("❌ Error en write tradicional: " + err4.message);
-				}
-			}
-		}
+		device.log("❌ Error array + length: " + err.message);
 	}
+	
+	// Método 2: device.write solo con array
+	try {
+		device.write(packet);
+		device.log(`📤 Paquete enviado exitosamente (solo array)`);
+		return;
+	} catch (err) {
+		device.log("❌ Error solo array: " + err.message);
+	}
+	
+	// Método 3: Probar setFeatureReport (método HID común)
+	try {
+		device.setFeatureReport(packet, packet.length);
+		device.log(`📤 setFeatureReport exitoso`);
+		return;
+	} catch (err) {
+		device.log("❌ Error setFeatureReport: " + err.message);
+	}
+	
+	// Método 4: Probar con diferentes formatos de buffer
+	try {
+		let buffer = new Uint8Array(packet);
+		device.write(buffer);
+		device.log(`📤 Uint8Array exitoso`);
+		return;
+	} catch (err) {
+		device.log("❌ Error Uint8Array: " + err.message);
+	}
+	
+	// Método 5: Intentar con report ID
+	try {
+		let packetWithReportId = [0x00, ...packet];
+		device.write(packetWithReportId);
+		device.log(`📤 Con Report ID exitoso`);
+		return;
+	} catch (err) {
+		device.log("❌ Error con Report ID: " + err.message);
+	}
+	
+	device.log("❌ Todos los métodos fallaron");
 }
 
 
