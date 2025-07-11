@@ -32,7 +32,7 @@ export function Initialize() {
 export function Render() {
 	device.log("🎨 Render ciclo iniciado");
 	sendColors();
-	device.pause(1000); // Pausa de 1 segundo para facilitar debugging
+	device.pause(3000); // Pausa de 3 segundos para observar cambios
 }
 
 export function Shutdown(SystemSuspending) {
@@ -55,52 +55,59 @@ function sendColors(overrideColor) {
 		device.log(`🌈 Color capturado: RGB(${color[0]}, ${color[1]}, ${color[2]})`);
 	}
 
-	// Paquete base capturado de Wireshark, sin los colores
-	let basePacket = [
-		0x1b, 0x00, 0x50, 0x70, 0x6e, 0x1b, 0x8d, 0xd5,
-		0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x09, 0x00,
-		color[0], color[1], color[2],
-		0x06, 0x00, 0x04, 0x01, 0x00, 0x00, 0x00, 0x00
-	];
+	device.log(`📦 Preparando envío de color RGB(${color[0]}, ${color[1]}, ${color[2]})`);
 
-	device.log(`📦 Preparando envío - Longitud: ${basePacket.length}`);
-	device.log(`📦 Datos base: [${basePacket.join(", ")}]`);
-
-	// Lista de configuraciones a probar
+	// Lista de configuraciones a probar sistemáticamente
 	let configuraciones = [
-		// Configuración 1: Paquete original
-		{ data: basePacket, desc: "Paquete original (27 bytes)" },
-
-		// Configuración 2: Con Report ID 0x00
-		{ data: [0x00, ...basePacket], desc: "Con Report ID 0x00 (28 bytes)" },
-
-		// Configuración 3: Con Report ID 0x01  
-		{ data: [0x01, ...basePacket], desc: "Con Report ID 0x01 (28 bytes)" },
-
-		// Configuración 4: Con Report ID 0x02
-		{ data: [0x02, ...basePacket], desc: "Con Report ID 0x02 (28 bytes)" },
-
-		// Configuración 5: Padding a 32 bytes
-		{ data: [...basePacket, 0x00, 0x00, 0x00, 0x00, 0x00], desc: "Padding a 32 bytes" },
-
-		// Configuración 6: El primer byte podría ser el Report ID
-		{ data: [0x00, 0x00, 0x50, 0x70, 0x6e, 0x1b, 0x8d, 0xd5, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x09, 0x00, color[0], color[1], color[2], 0x06, 0x00, 0x04, 0x01, 0x00, 0x00, 0x00, 0x00], desc: "Reinterpretando 0x1b como Report ID" }
+		// Config 1: 0x1b como Report ID + datos sin el primer 0x1b
+		{
+			data: [0x1b, 0x00, 0x50, 0x70, 0x6e, 0x1b, 0x8d, 0xd5, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x09, 0x00, color[0], color[1], color[2], 0x06, 0x00, 0x04, 0x01, 0x00, 0x00, 0x00, 0x00],
+			desc: "0x1b como Report ID"
+		},
+		
+		// Config 2: Report ID 0x00 + datos completos
+		{
+			data: [0x00, 0x1b, 0x00, 0x50, 0x70, 0x6e, 0x1b, 0x8d, 0xd5, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x09, 0x00, color[0], color[1], color[2], 0x06, 0x00, 0x04, 0x01, 0x00, 0x00, 0x00, 0x00],
+			desc: "Report ID 0x00 + datos completos"
+		},
+		
+		// Config 3: Datos sin ningún Report ID
+		{
+			data: [0x00, 0x50, 0x70, 0x6e, 0x1b, 0x8d, 0xd5, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x09, 0x00, color[0], color[1], color[2], 0x06, 0x00, 0x04, 0x01, 0x00, 0x00, 0x00, 0x00],
+			desc: "Sin 0x1b inicial, empezando con 0x00"
+		},
+		
+		// Config 4: Formato simple RGB
+		{
+			data: [0x1b, color[0], color[1], color[2], 0x00, 0x00, 0x00, 0x00],
+			desc: "Formato simple 0x1b + RGB"
+		},
+		
+		// Config 5: Padding a 32 bytes con 0x1b como Report ID
+		{
+			data: [0x1b, 0x00, 0x50, 0x70, 0x6e, 0x1b, 0x8d, 0xd5, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x09, 0x00, color[0], color[1], color[2], 0x06, 0x00, 0x04, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00],
+			desc: "32 bytes con 0x1b como Report ID"
+		}
 	];
 
 	for (let i = 0; i < configuraciones.length; i++) {
 		let config = configuraciones[i];
-		device.log(`🔄 Probando configuración ${i + 1}: ${config.desc}`);
-
+		device.log(`🔄 [${i + 1}/${configuraciones.length}] ${config.desc}`);
+		device.log(`📦 Datos (${config.data.length} bytes): [${config.data.join(", ")}]`);
+		
 		try {
 			device.write(config.data, config.data.length);
-			device.log(`✅ ÉXITO configuración ${i + 1}: ${config.desc}`);
-			return; // Si funciona, salir
+			device.log(`✅ Config ${i + 1} completada - verificar teclado físicamente`);
+			
+			// Pausa para ver si el teclado cambió
+			device.pause(100);
+			
 		} catch (err) {
-			device.log(`❌ Falló configuración ${i + 1}: ${err.message}`);
+			device.log(`❌ Config ${i + 1} falló: ${err.message}`);
 		}
 	}
-
-	device.log("❌ Todas las configuraciones fallaron");
+	
+	device.log("🔍 Todas las configuraciones enviadas - verificar cuál funcionó visualmente");
 }
 
 
