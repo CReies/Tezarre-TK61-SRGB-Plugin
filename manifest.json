@@ -1,0 +1,6 @@
+{
+	"name": "Tezarre TK61",
+	"author": "CReies",
+	"description": "Plugin personalizado para Tezarre TK61",
+	"entry": "signal-plugin.js"
+}
