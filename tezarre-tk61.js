@@ -111,31 +111,32 @@ function sendColors(overrideColor) {
 		device.log(`📊 Datos: [${config.datos.slice(0, 10).map(x => '0x' + x.toString(16).padStart(2, '0')).join(', ')}...]`);
 		
 		try {
-			// Intentar escribir sin especificar longitud
-			device.write(config.datos);
+			// Intentar escribir especificando la longitud
+			device.write(config.datos, config.datos.length);
 			device.log(`✅ ${config.nombre} - write() exitoso`);
 			
 			// Pausa para observar efecto físico
-			device.pause(500);
-			device.log(`🔍 ¿Cambió el color del teclado? Observar físicamente...`);
-			return; // Si no hay excepción, asumir éxito y parar
+			device.pause(1000);
+			device.log(`🔍 ¿Cambió el color del teclado? Si SÍ cambió, reportar esta configuración`);
+			
+			// No hacer return aquí - probar TODAS las configuraciones para ver cuál funciona
 			
 		} catch (err) {
 			device.log(`❌ ${config.nombre}: ${err.message}`);
 		}
 		
-		// Pequeña pausa entre intentos
-		device.pause(100);
+		// Pausa entre intentos para observar cambios
+		device.pause(500);
 	}
 	
-	device.log("❌ Ninguna configuración funcionó");
-	device.log("💡 Sugerencias:");
+	device.log("🔚 Fin de pruebas - revisar cuál configuración cambió el color del teclado");
+	device.log("🔚 Fin de pruebas - revisar cuál configuración cambió el color del teclado");
+	device.log("💡 Sugerencias adicionales:");
 	device.log("💡 1. Verificar si el teclado está en modo RGB correcto");
 	device.log("💡 2. Probar con software original del fabricante primero");
 	device.log("💡 3. Capturar más paquetes Wireshark durante cambios de color");
+	device.log("💡 4. Si ninguna funciona, puede que necesite un comando de 'activación' primero");
 }
-
-
 
 function hexToRgb(hex) {
 	if (!hex.startsWith("#")) hex = "#" + hex;
