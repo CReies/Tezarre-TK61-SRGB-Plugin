@@ -1,5 +1,5 @@
 module.exports = function ({ signal }) {
-	const myKeyboard = require('./deviceHandlers/tezarre-tk61');
+	const myKeyboard = require('./deviceHandlers/tezarre-tk61.mjs');
 
 	signal.on('start', async () => {
 		await myKeyboard.init();
