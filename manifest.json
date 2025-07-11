@@ -1,6 +1,6 @@
 {
-	"name": "Tezarre TK61",
+	"name": "Tezarre TK61 RGB",
 	"author": "CReies",
-	"description": "Plugin personalizado para Tezarre TK61",
+	"description": "Plugin personalizado para teclado Tezarre TK61",
 	"entry": "signal-plugin.js"
 }
