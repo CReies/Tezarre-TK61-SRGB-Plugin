@@ -11,41 +11,43 @@ module.exports = {
 		ledCount: 1,
 		write(colors) {
 			if (!device) return;
-			const buffer = Buffer.from([0x00, 0xFF, 0x00]); // ejemplo de rojo
+			const buffer = Buffer.from([0x00, 0xFF, 0x00]);
 			try {
 				device.write(buffer);
-				console.log('🎨 Buffer enviado');
+				log("🎨 Buffer enviado");
 			} catch (err) {
-				console.error('❌ Error al enviar buffer:', err.message);
+				log("💥 Error escribiendo buffer: " + err.message);
 			}
 		}
 	},
 
-	async init() {
+	async init(log) {
+		log("init() called");
 		const devices = HID.devices();
-		console.log('📋 Dispositivos detectados:', devices.length);
+		log("Devices count: " + devices.length);
 		const info = devices.find(d => d.vendorId === vendorId && d.productId === productId);
 		if (!info) {
-			console.error('❌ No se encontró el dispositivo');
+			log("No se encontró dispositivo TK61");
 			return false;
 		}
 		try {
 			device = new HID.HID(info.path);
-			console.log('✅ Dispositivo abierto:', info.path);
+			log("Dispositivo abierto: " + info.path);
 			return true;
 		} catch (err) {
-			console.error('❌ Error al abrir HID:', err.message);
+			log("Error abriendo dispositivo: " + err.message);
 			return false;
 		}
 	},
 
-	cleanup() {
+	cleanup(log) {
+		log("cleanup() called");
 		if (device) {
 			try {
 				device.close();
-				console.log('🛑 Dispositivo cerrado');
+				log("Dispositivo cerrado");
 			} catch (err) {
-				console.error('⚠️ Error cerrando dispositivo:', err.message);
+				log("Error cerrando dispositivo: " + err.message);
 			}
 		}
 	}

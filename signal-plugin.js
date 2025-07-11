@@ -1,20 +1,29 @@
+const fs = require('fs');
+const path = require('path');
+const logPath = path.join(__dirname, 'plugin-log.txt');
+const log = (msg) => {
+	fs.appendFileSync(logPath, new Date().toISOString() + " " + msg + "\n");
+};
+
 module.exports = function (context) {
-	const { signal } = context;
+	log("module.exports function loaded");
+
+	const { signal, deviceManager } = context;
 	const teclado = require('./deviceHandlers/teclado.js');
 
 	signal.on('start', async () => {
-		console.log('🟢 Plugin arrancó');
-		const ok = await teclado.init();
+		log("start event triggered");
+		const ok = await teclado.init(log);
 		if (ok) {
-			console.log('✅ Teclado inicializado, agregando dispositivo');
-			context.deviceManager.addDevice(teclado.device);
+			log("init OK — adding device");
+			deviceManager.addDevice(teclado.device);
 		} else {
-			console.error('❌ No se pudo inicializar el teclado');
+			log("init FAILED");
 		}
 	});
 
 	signal.on('stop', () => {
-		teclado.cleanup();
-		console.log('🛑 Plugin detenido');
+		log("stop event triggered");
+		teclado.cleanup(log);
 	});
 };
