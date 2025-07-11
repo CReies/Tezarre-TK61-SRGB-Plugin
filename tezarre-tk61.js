@@ -6,6 +6,7 @@ export function Documentation() { return "SignalRGB plugin para Tezarre TK61 key
 export function Size() { return [14, 5]; }
 export function DefaultPosition() { return [240, 120]; }
 export function DefaultScale() { return 8.0; }
+export function DeviceType() { return "keyboard"; }
 
 // TK61 60% layout - based on official Nuvoton plugin
 let vLedNames = [
@@ -83,10 +84,11 @@ function setDirectLightingMode() {
 
 function sendIndividualColors(overrideColor) {
 	try {
-		// Prepare RGB data array for all LEDs
-		const RGBData = new Array(61 * 3).fill(0);
+		// Create RGB data array - initialize with zeros
+		const maxOffset = Math.max(...vLedOffsets);
+		const RGBData = new Array((maxOffset + 1) * 3).fill(0);
 
-		// Fill RGB data for each LED
+		// Fill RGB data for each LED using the correct offset mapping
 		for (let iIdx = 0; iIdx < vLedNames.length; iIdx++) {
 			const iPxX = vLedPositions[iIdx][0];
 			const iPxY = vLedPositions[iIdx][1];
@@ -94,6 +96,8 @@ function sendIndividualColors(overrideColor) {
 
 			if (overrideColor) {
 				color = hexToRgb(overrideColor);
+			} else if (typeof LightingMode !== "undefined" && LightingMode === "Forced") {
+				color = hexToRgb(forcedColor);
 			} else {
 				color = device.color(iPxX, iPxY);
 			}
@@ -104,16 +108,16 @@ function sendIndividualColors(overrideColor) {
 			RGBData[ledOffset * 3 + 2] = color[2]; // B
 		}
 
-		// Send data in packets (18 LEDs per packet max)
-		let totalLEDs = RGBData.length / 3;
+		// Send data in packets (18 LEDs per packet max) - following Nuvoton protocol
+		let zoneTotalLEDs = RGBData.length / 3;
 		let packetCount = 0;
 		let dataIndex = 0;
 
-		while (totalLEDs > 0) {
-			const ledsToSend = totalLEDs >= 18 ? 18 : totalLEDs;
+		while (zoneTotalLEDs > 0) {
+			const ledsToSend = zoneTotalLEDs >= 18 ? 18 : zoneTotalLEDs;
 			const bytesToSend = ledsToSend * 3;
 
-			// Create packet header
+			// Create packet header - zone 0 for keyboard
 			const header = [0x01, 0x0F, 0x00, 0x00, packetCount, bytesToSend];
 
 			// Get data for this packet
@@ -129,7 +133,7 @@ function sendIndividualColors(overrideColor) {
 
 			device.write(packet, 65);
 
-			totalLEDs -= ledsToSend;
+			zoneTotalLEDs -= ledsToSend;
 			dataIndex += bytesToSend;
 			packetCount++;
 			device.pause(1);
@@ -158,18 +162,15 @@ function hexToRgb(hex) {
 	];
 }
 
+export function ControllableParameters() {
+	return [
+		{ property: "shutdownColor", group: "lighting", label: "Shutdown Color", description: "This color is applied to the device when the System, or SignalRGB is shutting down", min: "0", max: "360", type: "color", default: "#000000" },
+		{ property: "LightingMode", group: "lighting", label: "Lighting Mode", description: "Determines where the device's RGB comes from. Canvas will pull from the active Effect, while Forced will override it to a specific color", type: "combobox", values: ["Canvas", "Forced"], default: "Canvas" },
+		{ property: "forcedColor", group: "lighting", label: "Forced Color", description: "The color used when 'Forced' Lighting Mode is enabled", min: "0", max: "360", type: "color", default: "#009bde" },
+	];
+}
+
 export function Validate(endpoint) {
-	// Prioridad 1: Interfaz 2 con usage_page vendor-specific (0xff1b)
-	if (endpoint.interface === 2 && endpoint.usage_page === 0xff1b) {
-		device.log(`✅ Endpoint PERFECTO (vendor-specific): interface ${endpoint.interface}`);
-		return true;
-	}
-
-	// Prioridad 2: Solo interfaz 2 (la más prometedora según los logs)
-	if (endpoint.interface === 2) {
-		device.log(`✅ Endpoint BUENO (interface 2): intentando...`);
-		return true;
-	}
-
-	return false;
+	// Use the exact same validation as the Nuvoton plugin
+	return endpoint.interface === 2 && endpoint.usage === 0x0091 && endpoint.usage_page === 0xFF1B && endpoint.collection === 0x0000;
 }
