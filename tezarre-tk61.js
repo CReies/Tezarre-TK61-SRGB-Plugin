@@ -36,7 +36,7 @@ export function Initialize() {
 export function Render() {
 	device.log("🎨 Render ciclo iniciado");
 	sendColors();
-	device.pause(2000); // 2 segundos para observar si alguna config funciona
+	device.pause(5000); // 5 segundos para observar efectos físicos
 }
 
 export function Shutdown(SystemSuspending) {
@@ -61,103 +61,78 @@ function sendColors(overrideColor) {
 
 	device.log(`📦 Enviando color RGB(${color[0]}, ${color[1]}, ${color[2]})`);
 
-	// Datos base del paquete capturado de Wireshark
-	let baseData = [0x00, 0x50, 0x70, 0x6e, 0x1b, 0x8d, 0xd5, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x09, 0x00, color[0], color[1], color[2], 0x06, 0x00, 0x04, 0x01, 0x00, 0x00, 0x00, 0x00];
-
-	// Métodos alternativos para dispositivos HID en SignalRGB
-	let metodos = [
-		// Método 1: setFeatureReport con Report ID 0x1B
-		() => {
-			device.log("🔄 Método 1: setFeatureReport con Report ID 0x1B");
-			try {
-				device.setFeatureReport([0x1b, ...baseData], 27);
-				device.log("✅ setFeatureReport 0x1B exitoso");
-				return true;
-			} catch (err) {
-				device.log(`❌ setFeatureReport 0x1B: ${err.message}`);
-				return false;
-			}
+	// Probar diferentes Report IDs y formatos basados en Wireshark
+	let configuraciones = [
+		// Config 1: Sin Report ID (paquete directo)
+		{
+			nombre: "Paquete directo sin Report ID",
+			datos: [0x50, 0x70, 0x6e, 0x1b, 0x8d, 0xd5, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x09, 0x00, color[0], color[1], color[2], 0x06, 0x00, 0x04, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00]
 		},
 		
-		// Método 2: sendOutputReport con Report ID 0x1B
-		() => {
-			device.log("🔄 Método 2: sendOutputReport con Report ID 0x1B");
-			try {
-				device.sendOutputReport([0x1b, ...baseData], 27);
-				device.log("✅ sendOutputReport 0x1B exitoso");
-				return true;
-			} catch (err) {
-				device.log(`❌ sendOutputReport 0x1B: ${err.message}`);
-				return false;
-			}
+		// Config 2: Report ID 0x00 como primer byte
+		{
+			nombre: "Report ID 0x00",
+			datos: [0x00, 0x50, 0x70, 0x6e, 0x1b, 0x8d, 0xd5, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x09, 0x00, color[0], color[1], color[2], 0x06, 0x00, 0x04, 0x01, 0x00, 0x00, 0x00, 0x00]
 		},
 		
-		// Método 3: write con sintaxis específica de SignalRGB para HID
-		() => {
-			device.log("🔄 Método 3: write específico HID");
-			try {
-				device.write([0x1b, ...baseData]);
-				device.log("✅ write HID exitoso");
-				return true;
-			} catch (err) {
-				device.log(`❌ write HID: ${err.message}`);
-				return false;
-			}
+		// Config 3: Report ID 0x1B (según Analysis)
+		{
+			nombre: "Report ID 0x1B",
+			datos: [0x1b, 0x50, 0x70, 0x6e, 0x1b, 0x8d, 0xd5, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x09, 0x00, color[0], color[1], color[2], 0x06, 0x00, 0x04, 0x01, 0x00, 0x00, 0x00, 0x00]
 		},
 		
-		// Método 4: Probar con buffer de tamaño fijo (común en HID)
-		() => {
-			device.log("🔄 Método 4: Buffer 32 bytes");
-			let buffer32 = [0x1b, ...baseData];
-			while (buffer32.length < 32) buffer32.push(0x00);
-			try {
-				device.write(buffer32, 32);
-				device.log("✅ Buffer 32 bytes exitoso");
-				return true;
-			} catch (err) {
-				device.log(`❌ Buffer 32 bytes: ${err.message}`);
-				return false;
-			}
+		// Config 4: Comando corto basado en posiciones RGB
+		{
+			nombre: "Comando RGB corto",
+			datos: [0x1b, 0x09, 0x00, color[0], color[1], color[2]]
 		},
 		
-		// Método 5: Usar el paquete exacto de Wireshark
-		() => {
-			device.log("🔄 Método 5: Paquete Wireshark exacto");
-			let exactPacket = [0x1b, 0x00, 0x50, 0x70, 0x6e, 0x1b, 0x8d, 0xd5, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x09, 0x00, color[0], color[1], color[2], 0x06, 0x00, 0x04, 0x01, 0x00, 0x00, 0x00, 0x00];
-			try {
-				device.write(exactPacket);
-				device.log("✅ Paquete exacto exitoso");
-				return true;
-			} catch (err) {
-				device.log(`❌ Paquete exacto: ${err.message}`);
-				return false;
-			}
+		// Config 5: Formato alternativo con header
+		{
+			nombre: "Header + RGB",
+			datos: [0x00, 0x1b, 0x09, 0x00, color[0], color[1], color[2], 0x06, 0x00, 0x04, 0x01]
 		},
 		
-		// Método 6: Comando simple RGB directo
-		() => {
-			device.log("🔄 Método 6: RGB simple");
-			try {
-				device.write([0x1b, color[0], color[1], color[2]]);
-				device.log("✅ RGB simple exitoso");
-				return true;
-			} catch (err) {
-				device.log(`❌ RGB simple: ${err.message}`);
-				return false;
-			}
+		// Config 6: Paquete de 64 bytes (tamaño estándar HID)
+		{
+			nombre: "Buffer 64 bytes",
+			datos: (() => {
+				let buf = [0x1b, 0x50, 0x70, 0x6e, 0x1b, 0x8d, 0xd5, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x09, 0x00, color[0], color[1], color[2], 0x06, 0x00, 0x04, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00];
+				while (buf.length < 64) buf.push(0x00);
+				return buf;
+			})()
 		}
 	];
 
-	// Probar todos los métodos
-	for (let i = 0; i < metodos.length; i++) {
-		if (metodos[i]()) {
-			device.log(`🎉 MÉTODO ${i + 1} FUNCIONÓ - usar este en el futuro`);
-			return; // Salir si algún método funciona
+	// Probar cada configuración
+	for (let i = 0; i < configuraciones.length; i++) {
+		let config = configuraciones[i];
+		device.log(`🔄 Probando: ${config.nombre} (${config.datos.length} bytes)`);
+		device.log(`📊 Datos: [${config.datos.slice(0, 10).map(x => '0x' + x.toString(16).padStart(2, '0')).join(', ')}...]`);
+		
+		try {
+			// Intentar escribir sin especificar longitud
+			device.write(config.datos);
+			device.log(`✅ ${config.nombre} - write() exitoso`);
+			
+			// Pausa para observar efecto físico
+			device.pause(500);
+			device.log(`🔍 ¿Cambió el color del teclado? Observar físicamente...`);
+			return; // Si no hay excepción, asumir éxito y parar
+			
+		} catch (err) {
+			device.log(`❌ ${config.nombre}: ${err.message}`);
 		}
-		device.pause(50); // Pequeña pausa entre métodos
+		
+		// Pequeña pausa entre intentos
+		device.pause(100);
 	}
 	
-	device.log("❌ Ningún método funcionó - verificar protocolo del dispositivo");
+	device.log("❌ Ninguna configuración funcionó");
+	device.log("💡 Sugerencias:");
+	device.log("💡 1. Verificar si el teclado está en modo RGB correcto");
+	device.log("💡 2. Probar con software original del fabricante primero");
+	device.log("💡 3. Capturar más paquetes Wireshark durante cambios de color");
 }
 
 
