@@ -1,6 +1,6 @@
 export function Name() { return "Tezarre TK61"; }
-export function VendorId() { return 0x3434; }
-export function ProductId() { return 0x0140; }
+export function VendorId() { return 0x0416; }
+export function ProductId() { return 0xC345; }
 export function Publisher() { return "CReies"; }
 export function Documentation() { return "SignalRGB plugin para Tezarre TK61 keyboard con soporte completo de RGB"; }
 export function Size() { return [1, 1]; }
