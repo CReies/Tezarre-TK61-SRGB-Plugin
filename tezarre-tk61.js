@@ -57,60 +57,63 @@ function sendColors(overrideColor) {
 		0x06, 0x00, 0x04, 0x01, 0x00, 0x00, 0x00, 0x00
 	];
 
-	// Asegurar que el paquete tiene la longitud correcta
-	if (packet.length === 0) {
-		device.log("❌ Error: paquete vacío");
-		return;
-	}
-
 	device.log(`📦 Preparando envío - Longitud: ${packet.length}`);
 	device.log(`📦 Datos: [${packet.join(", ")}]`);
 	
-	// Método 1: device.write con array directo (más común en SignalRGB)
+	// Método 1: Sintaxis típica de SignalRGB con endpoint específico
 	try {
-		device.write(packet, packet.length);
-		device.log(`📤 Paquete enviado exitosamente (array + length)`);
-		return; // Si funciona, salir aquí
-	} catch (err) {
-		device.log("❌ Error array + length: " + err.message);
-	}
-	
-	// Método 2: device.write solo con array
-	try {
-		device.write(packet);
-		device.log(`📤 Paquete enviado exitosamente (solo array)`);
+		device.write(packet, 27);
+		device.log(`📤 Método 1 exitoso (packet, 27)`);
 		return;
 	} catch (err) {
-		device.log("❌ Error solo array: " + err.message);
+		device.log("❌ Método 1 error: " + err.message);
 	}
 	
-	// Método 3: Probar setFeatureReport (método HID común)
+	// Método 2: Intentar con endpoint 0x00
 	try {
-		device.setFeatureReport(packet, packet.length);
-		device.log(`📤 setFeatureReport exitoso`);
+		device.write([0x00, ...packet], 28);
+		device.log(`📤 Método 2 exitoso (0x00 + packet, 28)`);
 		return;
 	} catch (err) {
-		device.log("❌ Error setFeatureReport: " + err.message);
+		device.log("❌ Método 2 error: " + err.message);
 	}
 	
-	// Método 4: Probar con diferentes formatos de buffer
+	// Método 3: Formato de 32 bytes (común en HID)
 	try {
-		let buffer = new Uint8Array(packet);
-		device.write(buffer);
-		device.log(`📤 Uint8Array exitoso`);
+		let paddedPacket = [...packet];
+		while (paddedPacket.length < 32) {
+			paddedPacket.push(0x00);
+		}
+		device.write(paddedPacket, 32);
+		device.log(`📤 Método 3 exitoso (32 bytes padded)`);
 		return;
 	} catch (err) {
-		device.log("❌ Error Uint8Array: " + err.message);
+		device.log("❌ Método 3 error: " + err.message);
 	}
 	
-	// Método 5: Intentar con report ID
+	// Método 4: Formato de 64 bytes (otro tamaño común)
 	try {
-		let packetWithReportId = [0x00, ...packet];
-		device.write(packetWithReportId);
-		device.log(`📤 Con Report ID exitoso`);
+		let paddedPacket = [...packet];
+		while (paddedPacket.length < 64) {
+			paddedPacket.push(0x00);
+		}
+		device.write(paddedPacket, 64);
+		device.log(`📤 Método 4 exitoso (64 bytes padded)`);
 		return;
 	} catch (err) {
-		device.log("❌ Error con Report ID: " + err.message);
+		device.log("❌ Método 4 error: " + err.message);
+	}
+	
+	// Método 5: Probar diferentes Report IDs
+	for (let reportId = 0; reportId <= 3; reportId++) {
+		try {
+			let packetWithId = [reportId, ...packet];
+			device.write(packetWithId, packetWithId.length);
+			device.log(`📤 Método 5 exitoso (Report ID: ${reportId})`);
+			return;
+		} catch (err) {
+			device.log(`❌ Método 5 error (Report ID ${reportId}): ${err.message}`);
+		}
 	}
 	
 	device.log("❌ Todos los métodos fallaron");
@@ -135,19 +138,19 @@ function hexToRgb(hex) {
 export function Validate(endpoint) {
 	device.log("🔍 Validando endpoint...");
 	device.log(`🔍 Endpoint interface: ${endpoint.interface}, usage: 0x${endpoint.usage?.toString(16).padStart(4, '0')}, usage_page: 0x${endpoint.usage_page?.toString(16).padStart(4, '0')}, collection: ${endpoint.collection}`);
-
-	// Buscar la interfaz 2 con usage_page vendor-specific (0xff1b)
+	
+	// Prioridad 1: Interfaz 2 con usage_page vendor-specific (0xff1b)
 	if (endpoint.interface === 2 && endpoint.usage_page === 0xff1b) {
-		device.log(`✅ Endpoint válido (vendor-specific): interface ${endpoint.interface}`);
+		device.log(`✅ Endpoint PERFECTO (vendor-specific): interface ${endpoint.interface}`);
 		return true;
 	}
-
-	// También intentar con interfaz 0 como fallback
-	if (endpoint.interface === 0) {
-		device.log(`⚠️ Endpoint fallback (interface 0): intentando...`);
+	
+	// Prioridad 2: Solo interfaz 2 (la más prometedora según los logs)
+	if (endpoint.interface === 2) {
+		device.log(`✅ Endpoint BUENO (interface 2): intentando...`);
 		return true;
 	}
-
-	device.log(`❌ Endpoint no válido: interface ${endpoint.interface}`);
+	
+	device.log(`❌ Endpoint rechazado: interface ${endpoint.interface}`);
 	return false;
 }
