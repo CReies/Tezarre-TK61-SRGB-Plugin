@@ -7,6 +7,7 @@ export function Size() { return [15, 5]; }
 export function DefaultPosition() { return [10, 100]; }
 export function DefaultScale() { return 8.0; }
 export function ConflictingProcesses() { return ["Tezarre.exe"]; }
+export function DeviceType() { return "keyboard"; }
 export function ControllableParameters() {
 	return [
 		{ "property": "shutdownColor", "group": "lighting", "label": "Shutdown Color", "min": "0", "max": "360", "type": "color", "default": "#009bde" },
@@ -174,7 +175,7 @@ function testWASDColors() {
 function sendFullCanvasColors() {
 	// Crear array para almacenar todos los colores por offset
 	const ledColors = new Map();
-
+	
 	// Obtener colores del canvas para cada una de las 61 teclas
 	let ledIndex = 0;
 	for (let row = 0; row < keyMap.length; row++) {
@@ -183,7 +184,7 @@ function sendFullCanvasColors() {
 			const color = device.color(col, row);
 			ledColors.set(offset, {
 				r: color[0],
-				g: color[1],
+				g: color[1], 
 				b: color[2]
 			});
 			ledIndex++;
