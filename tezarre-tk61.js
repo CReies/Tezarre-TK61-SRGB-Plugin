@@ -3,10 +3,11 @@ export function VendorId() { return 0x3434; }
 export function ProductId() { return 0x0140; }
 export function Publisher() { return "Crist"; }
 export function Documentation() { return "support/Documentation.md"; }
-export function Size() { return [22, 6]; }
+export function Size() { return [15, 5]; }
 export function DefaultPosition() { return [10, 100]; }
 export function DefaultScale() { return 8.0; }
 export function ConflictingProcesses() { return ["Tezarre.exe"]; }
+export function DeviceType() { return "keyboard"; }
 export function ControllableParameters() {
 	return [
 		{ "property": "shutdownColor", "group": "lighting", "label": "Shutdown Color", "min": "0", "max": "360", "type": "color", "default": "#009bde" },
@@ -15,21 +16,55 @@ export function ControllableParameters() {
 	];
 }
 
-// Layout completo del TKL con offsets de OpenRGB
+// Layout del TK61 (60%) - 61 teclas exactas
 const keyMap = [
-	// Row 0: Function keys
-	[7, 0xFF, 13, 16, 19, 22, 0xFF, 28, 31, 34, 37, 0xFF, 40, 43, 46, 49, 0xFF, 52, 55, 58],
-	// Row 1: Number row  
-	[83, 86, 89, 92, 95, 98, 101, 104, 107, 110, 113, 116, 119, 135, 0xFF, 138, 141, 144],
-	// Row 2: QWERTY row
-	[159, 162, 165, 168, 171, 174, 177, 180, 183, 186, 199, 202, 205, 211, 0xFF, 214, 217, 220],
-	// Row 3: ASDF row
-	[235, 241, 244, 247, 250, 263, 266, 269, 272, 275, 278, 281, 284, 287, 0xFF, 0xFF, 0xFF, 0xFF],
-	// Row 4: ZXCV row
-	[311, 314, 327, 330, 333, 336, 339, 342, 345, 348, 351, 354, 363, 0xFF, 0xFF, 369, 0xFF, 0xFF],
-	// Row 5: Bottom row
-	[397, 400, 403, 0xFF, 0xFF, 415, 0xFF, 0xFF, 0xFF, 427, 430, 433, 436, 0xFF, 442, 455, 458, 0xFF]
+	// Row 0: Números y función
+	[7, 13, 16, 19, 22, 28, 31, 34, 37, 40, 43, 46, 49, 52],
+	// Row 1: QWERTY
+	[83, 86, 89, 92, 95, 98, 101, 104, 107, 110, 113, 116, 119, 135],
+	// Row 2: ASDF 
+	[159, 162, 165, 168, 171, 174, 177, 180, 183, 186, 199, 202, 211],
+	// Row 3: ZXCV
+	[235, 241, 244, 247, 250, 263, 266, 269, 272, 275, 278, 287],
+	// Row 4: Modificadores
+	[311, 314, 327, 415, 427, 430, 433, 436]
 ];
+
+// Nombres exactos de las 61 teclas del TK61
+const keyNames = [
+	// Row 0: Primera fila
+	["Esc", "1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "-", "=", "Backspace"],
+	// Row 1: Segunda fila
+	["Tab", "Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P", "[", "]", "\\"],
+	// Row 2: Tercera fila
+	["Caps Lock", "A", "S", "D", "F", "G", "H", "J", "K", "L", ";", "'", "Enter"],
+	// Row 3: Cuarta fila
+	["Left Shift", "Z", "X", "C", "V", "B", "N", "M", ",", ".", "/", "Right Shift"],
+	// Row 4: Quinta fila
+	["Left Ctrl", "Left Win", "Left Alt", "Space", "Right Alt", "Menu", "Right Ctrl", "Fn"]
+];
+
+// Generar arrays de nombres y posiciones para SignalRGB
+let vLedNames = [];
+let vLedPositions = [];
+
+// Llenar arrays con las 61 teclas exactas
+for (let row = 0; row < keyMap.length; row++) {
+	for (let col = 0; col < keyMap[row].length; col++) {
+		const offset = keyMap[row][col];
+		const keyName = keyNames[row][col];
+		vLedNames.push(keyName);
+		vLedPositions.push([col, row]);
+	}
+}
+
+export function LedNames() {
+	return vLedNames;
+}
+
+export function LedPositions() {
+	return vLedPositions;
+}
 
 // WASD específico para test
 const WASD_OFFSETS = {
@@ -96,13 +131,8 @@ function sendForcedColor() {
 }
 
 function sendIndividualColors() {
-	// Sistema de 8 paquetes para LEDs individuales (según OpenRGB)
-
-	// Primero test con WASD para confirmar funcionalidad
-	testWASDColors();
-
-	// Luego enviar colores completos del canvas
-	// sendFullCanvasColors();
+	// Obtener colores del canvas de SignalRGB
+	sendFullCanvasColors();
 }
 
 function testWASDColors() {
@@ -143,15 +173,50 @@ function testWASDColors() {
 }
 
 function sendFullCanvasColors() {
-	// Implementar envío completo del canvas cuando el test funcione
+	// Crear array para almacenar todos los colores por offset
+	const ledColors = new Map();
+	
+	// Obtener colores del canvas para cada una de las 61 teclas
+	let ledIndex = 0;
 	for (let row = 0; row < keyMap.length; row++) {
 		for (let col = 0; col < keyMap[row].length; col++) {
 			const offset = keyMap[row][col];
-			if (offset === 0xFF) continue; // Posición vacía
-
-			const color = device.getColor(col, row);
-			// Enviar color a offset específico...
+			const color = device.color(col, row);
+			ledColors.set(offset, {
+				r: color[0],
+				g: color[1], 
+				b: color[2]
+			});
+			ledIndex++;
 		}
+	}
+
+	console.log(`Enviando ${ledColors.size} colores individuales del canvas TK61...`);
+
+	// Enviar en 8 paquetes como OpenRGB
+	for (let i = 0; i < 8; i++) {
+		const packet = new Array(64).fill(0);
+		packet[0] = 0x01;  // Report ID
+		packet[1] = 0x0F;  // SetLEDsData command
+		packet[2] = i;     // Packet number (0-7)
+
+		// Llenar datos RGB según offsets
+		ledColors.forEach((color, offset) => {
+			const packetStart = i * 64;
+			const packetEnd = (i + 1) * 64;
+
+			if (offset >= packetStart && offset < packetEnd) {
+				const localOffset = offset - packetStart;
+				if (localOffset + 2 < 61) { // Espacio para RGB
+					packet[3 + localOffset] = color.r;
+					packet[4 + localOffset] = color.g;
+					packet[5 + localOffset] = color.b;
+				}
+			}
+		});
+
+		hid.WriteFile(device, packet, packet.length);
+		sleep(1); // Pequeña pausa entre paquetes
 	}
 }
 
