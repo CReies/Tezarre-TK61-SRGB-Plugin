@@ -7,30 +7,31 @@ export function Size() { return [14, 5]; }
 export function DefaultPosition() { return [240, 120]; }
 export function DefaultScale() { return 8.0; }
 export function DeviceType() { return "keyboard"; }
+export function ImageUrl() { return "assets/tezarre-tk61.jpg"; }
 
 // TK61 60% layout - based on official Nuvoton plugin
 let vLedNames = [
 	"Esc", "1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "-_", "=+", "Backspace",
 	"Tab", "Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P", "[", "]", "\\",
-	"CapsLock", "A", "S", "D", "F", "G", "H", "J", "K", "L", ";", "'", "ISO_#", "Enter",
-	"Left Shift", "ISO_<", "Z", "X", "C", "V", "B", "N", "M", ",", ".", "/", "Right Shift",
+	"CapsLock", "A", "S", "D", "F", "G", "H", "J", "K", "L", ";", "'", "Enter",
+	"Left Shift", "Z", "X", "C", "V", "B", "N", "M", ",", ".", "/", "Right Shift",
 	"Left Ctrl", "Left Win", "Left Alt", "Space", "Right Alt", "Menu", "Right Ctrl", "Fn"
 ];
 
 let vLedPositions = [
 	[0, 0], [1, 0], [2, 0], [3, 0], [4, 0], [5, 0], [6, 0], [7, 0], [8, 0], [9, 0], [10, 0], [11, 0], [12, 0], [13, 0],
 	[0, 1], [1, 1], [2, 1], [3, 1], [4, 1], [5, 1], [6, 1], [7, 1], [8, 1], [9, 1], [10, 1], [11, 1], [12, 1], [13, 1],
-	[0, 2], [1, 2], [2, 2], [3, 2], [4, 2], [5, 2], [6, 2], [7, 2], [8, 2], [9, 2], [10, 2], [11, 2], [12, 2], [13, 2],
-	[0, 3], [1, 3], [2, 3], [3, 3], [4, 3], [5, 3], [6, 3], [7, 3], [8, 3], [9, 3], [10, 3], [11, 3], [13, 3],
+	[0, 2], [1, 2], [2, 2], [3, 2], [4, 2], [5, 2], [6, 2], [7, 2], [8, 2], [9, 2], [10, 2], [11, 2], [13, 2],
+	[0, 3], [2, 3], [3, 3], [4, 3], [5, 3], [6, 3], [7, 3], [8, 3], [9, 3], [10, 3], [11, 3], [13, 3],
 	[0, 4], [1, 4], [2, 4], [6, 4], [10, 4], [11, 4], [12, 4], [13, 4]
 ];
 
-// LED offsets for each key - based on Nuvoton plugin 60% layout
+// LED offsets for each key - based on Nuvoton plugin 60% layout (sin teclas ISO)
 let vLedOffsets = [
 	22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 36,
 	44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 58,
-	66, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80,
-	88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 102,
+	66, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 80,
+	88, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 102,
 	110, 111, 112, 116, 120, 121, 122, 123
 ];
 
