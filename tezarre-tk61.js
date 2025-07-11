@@ -44,26 +44,27 @@ function sendColors(overrideColor) {
 		color = hexToRgb(overrideColor);
 		device.log(`⚫ Override color: ${overrideColor}`);
 	} else {
-		color = device.color(0, 0); // Solo LED 1 en (0,0)
+		color = device.color(0, 0);
 		device.log(`🌈 Color capturado: RGB(${color[0]}, ${color[1]}, ${color[2]})`);
 	}
 
-	// ⚠️ ESTE BUFFER ES UN EJEMPLO: debes adaptarlo al protocolo real
 	let packet = [
-		0x00,          // header o padding
-		color[0],      // R
-		color[1],      // G
-		color[2],      // B
-		0x00, 0x00, 0x00, 0x00 // extra
+		0x00,          // padding / report ID
+		color[0],
+		color[1],
+		color[2],
+		0x00, 0x00, 0x00, 0x00
 	];
 
 	try {
-		device.send_report(packet, packet.length);
+		device.send_output_report(packet, 0x00); // ⚠️ CAMBIO AQUÍ
+		device.log(`📤 Output report enviado con ID 0x00`);
 		device.log(`📦 Packet enviado: [${packet.join(", ")}]`);
 	} catch (err) {
-		device.log("❌ Error al enviar packet: " + err.message);
+		device.log("❌ Error al enviar output report: " + err.message);
 	}
 }
+
 
 function hexToRgb(hex) {
 	if (!hex.startsWith("#")) hex = "#" + hex;
