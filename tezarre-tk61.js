@@ -63,25 +63,41 @@ function sendColors(overrideColor) {
 		return;
 	}
 
-	// Convertir a Buffer si es necesario
-	let buffer = new Uint8Array(packet);
-	
 	try {
-		device.log(`📦 Preparando envío - Longitud: ${buffer.length}`);
-		device.log(`📦 Datos: [${Array.from(buffer).join(", ")}]`);
-		
-		// Intentar con endpoint 0x01 en lugar de 0x00
-		device.write(0x01, buffer);
-		device.log(`📤 Paquete enviado exitosamente a endpoint 0x01`);
+		device.log(`📦 Preparando envío HID - Longitud: ${packet.length}`);
+		device.log(`📦 Datos: [${packet.join(", ")}]`);
+
+		// Método 1: Feature Report
+		device.sendFeatureReport(packet, packet.length);
+		device.log(`📤 Feature Report enviado exitosamente`);
+
 	} catch (err) {
-		device.log("❌ Error al enviar paquete a 0x01: " + err.message);
-		
-		// Fallback: intentar con endpoint 0x00
+		device.log("❌ Error al enviar Feature Report: " + err.message);
+
+		// Método 2: Output Report
 		try {
-			device.write(0x00, buffer);
-			device.log(`📤 Paquete enviado exitosamente a endpoint 0x00 (fallback)`);
+			device.sendOutputReport(packet, packet.length);
+			device.log(`📤 Output Report enviado exitosamente (fallback)`);
 		} catch (err2) {
-			device.log("❌ Error al enviar paquete a 0x00: " + err2.message);
+			device.log("❌ Error al enviar Output Report: " + err2.message);
+
+			// Método 3: Probar con Report ID al principio
+			try {
+				let packetWithReportId = [0x00, ...packet]; // Report ID 0x00
+				device.sendFeatureReport(packetWithReportId, packetWithReportId.length);
+				device.log(`📤 Feature Report con Report ID enviado exitosamente`);
+			} catch (err3) {
+				device.log("❌ Error con Report ID: " + err3.message);
+
+				// Método 4: Último fallback con write tradicional
+				try {
+					let buffer = new Uint8Array(packet);
+					device.write(0x00, buffer);
+					device.log(`📤 Write tradicional exitoso (último fallback)`);
+				} catch (err4) {
+					device.log("❌ Error en write tradicional: " + err4.message);
+				}
+			}
 		}
 	}
 }
@@ -104,14 +120,20 @@ function hexToRgb(hex) {
 
 export function Validate(endpoint) {
 	device.log("🔍 Validando endpoint...");
-	device.log(`🔍 Endpoint interface: ${endpoint.interface}, direction: ${endpoint.direction}, type: ${endpoint.type}`);
-	
-	// Validar que sea un endpoint de salida (OUT) y de tipo interrupt o bulk
-	if (endpoint.direction === "out" && (endpoint.type === "interrupt" || endpoint.type === "bulk")) {
-		device.log(`✅ Endpoint válido: ${endpoint.address}`);
+	device.log(`🔍 Endpoint interface: ${endpoint.interface}, usage: 0x${endpoint.usage?.toString(16).padStart(4, '0')}, usage_page: 0x${endpoint.usage_page?.toString(16).padStart(4, '0')}, collection: ${endpoint.collection}`);
+
+	// Buscar la interfaz 2 con usage_page vendor-specific (0xff1b)
+	if (endpoint.interface === 2 && endpoint.usage_page === 0xff1b) {
+		device.log(`✅ Endpoint válido (vendor-specific): interface ${endpoint.interface}`);
 		return true;
 	}
-	
-	device.log(`❌ Endpoint no válido: ${endpoint.address}`);
+
+	// También intentar con interfaz 0 como fallback
+	if (endpoint.interface === 0) {
+		device.log(`⚠️ Endpoint fallback (interface 0): intentando...`);
+		return true;
+	}
+
+	device.log(`❌ Endpoint no válido: interface ${endpoint.interface}`);
 	return false;
 }
