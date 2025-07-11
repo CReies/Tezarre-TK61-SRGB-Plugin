@@ -9,6 +9,7 @@ export function DefaultScale() { return 8.0; }
 
 let vLedNames = ["LED 1"];
 let vLedPositions = [[0, 0]];
+let shutdownColor = "#000000";
 
 export function LedNames() {
 	return vLedNames;
@@ -25,7 +26,7 @@ export function Initialize() {
 export function Render() {
 	device.log("🎨 Render ciclo iniciado");
 	sendColors();
-	device.pause(1); // evitar saturar el bus
+	device.pause(50); // Aumentar pausa para evitar saturar el bus
 }
 
 export function Shutdown(SystemSuspending) {
@@ -56,14 +57,33 @@ function sendColors(overrideColor) {
 		0x06, 0x00, 0x04, 0x01, 0x00, 0x00, 0x00, 0x00
 	];
 
-	try {
-		device.write(0x00, packet); // <-- ¡este es el cambio!
-		device.log(`📤 Paquete enviado exitosamente`);
-		device.log(`📦 Datos: [${packet.join(", ")}]`);
-	} catch (err) {
-		device.log("❌ Error al enviar paquete: " + err.message);
+	// Asegurar que el paquete tiene la longitud correcta
+	if (packet.length === 0) {
+		device.log("❌ Error: paquete vacío");
+		return;
 	}
 
+	// Convertir a Buffer si es necesario
+	let buffer = new Uint8Array(packet);
+	
+	try {
+		device.log(`📦 Preparando envío - Longitud: ${buffer.length}`);
+		device.log(`📦 Datos: [${Array.from(buffer).join(", ")}]`);
+		
+		// Intentar con endpoint 0x01 en lugar de 0x00
+		device.write(0x01, buffer);
+		device.log(`📤 Paquete enviado exitosamente a endpoint 0x01`);
+	} catch (err) {
+		device.log("❌ Error al enviar paquete a 0x01: " + err.message);
+		
+		// Fallback: intentar con endpoint 0x00
+		try {
+			device.write(0x00, buffer);
+			device.log(`📤 Paquete enviado exitosamente a endpoint 0x00 (fallback)`);
+		} catch (err2) {
+			device.log("❌ Error al enviar paquete a 0x00: " + err2.message);
+		}
+	}
 }
 
 
@@ -84,6 +104,14 @@ function hexToRgb(hex) {
 
 export function Validate(endpoint) {
 	device.log("🔍 Validando endpoint...");
-	// Puedes refinar esto si tienes más info
-	return endpoint.interface === 0;
+	device.log(`🔍 Endpoint interface: ${endpoint.interface}, direction: ${endpoint.direction}, type: ${endpoint.type}`);
+	
+	// Validar que sea un endpoint de salida (OUT) y de tipo interrupt o bulk
+	if (endpoint.direction === "out" && (endpoint.type === "interrupt" || endpoint.type === "bulk")) {
+		device.log(`✅ Endpoint válido: ${endpoint.address}`);
+		return true;
+	}
+	
+	device.log(`❌ Endpoint no válido: ${endpoint.address}`);
+	return false;
 }
