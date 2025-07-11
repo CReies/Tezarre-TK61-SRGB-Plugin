@@ -2,5 +2,5 @@
 	"name": "Tezarre TK61",
 	"author": "CReies",
 	"description": "Soporte RGB básico para Tezarre TK61",
-	"entry": "tezarre-tk61.js"
+	"entry": "tezarre-tk61-final.js"
 }

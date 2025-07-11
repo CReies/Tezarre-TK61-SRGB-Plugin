@@ -36,7 +36,7 @@ export function Initialize() {
 export function Render() {
 	device.log("🎨 Render ciclo iniciado");
 	sendColors();
-	device.pause(5000); // 5 segundos para observar efectos físicos
+	device.pause(100); // Reducido a 100ms para respuesta fluida del canvas
 }
 
 export function Shutdown(SystemSuspending) {
