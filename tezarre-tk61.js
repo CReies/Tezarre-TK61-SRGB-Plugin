@@ -57,12 +57,13 @@ function sendColors(overrideColor) {
 	];
 
 	try {
-		device.write(packet);
+		device.write(0x00, packet); // <-- ¡este es el cambio!
 		device.log(`📤 Paquete enviado exitosamente`);
 		device.log(`📦 Datos: [${packet.join(", ")}]`);
 	} catch (err) {
 		device.log("❌ Error al enviar paquete: " + err.message);
 	}
+
 }
 
 
