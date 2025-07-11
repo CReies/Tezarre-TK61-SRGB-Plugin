@@ -9,6 +9,12 @@ export function DefaultScale() { return 8.0; }
 export function DeviceType() { return "keyboard"; }
 export function ImageUrl() { return "https://github.com/CReies/Tezarre-TK61-SRGB-Plugin/blob/main/assets/tezarre-tk61.png?raw=true"; }
 
+/* global
+shutdownColor:readonly
+LightingMode:readonly
+forcedColor:readonly
+*/
+
 // TK61 60% layout - based on official Nuvoton plugin
 let vLedNames = [
 	"Esc", "1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "-_", "=+", "Backspace",
@@ -51,6 +57,12 @@ export function Initialize() {
 	device.log(`🔧 Vendor ID: 0x${VendorId().toString(16).padStart(4, '0')}`);
 	device.log(`🔧 Product ID: 0x${ProductId().toString(16).padStart(4, '0')}`);
 	device.log(`🔧 LEDs individuales: ${vLedNames.length}`);
+
+	// Set device properties like Nuvoton plugin
+	device.setName("Tezarre TK61");
+	device.setSize([14, 5]);
+	device.setControllableLeds(vLedNames, vLedPositions);
+	device.setImageFromUrl(ImageUrl());
 
 	// Set Direct lighting mode (based on Nuvoton plugin)
 	setDirectLightingMode();
@@ -150,10 +162,22 @@ function sendIndividualColors(overrideColor) {
 }
 
 function hexToRgb(hex) {
-	if (!hex.startsWith("#")) hex = "#" + hex;
+	// Handle different input types from SignalRGB
+	if (!hex) {
+		return [0, 0, 0];
+	}
+
+	// Convert to string if not already
+	hex = hex.toString();
+
+	// Ensure it starts with #
+	if (!hex.startsWith("#")) {
+		hex = "#" + hex;
+	}
+
 	let result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
 	if (!result) {
-		device.log("❌ Error en hexToRgb: input inválido");
+		device.log(`❌ Error en hexToRgb: input inválido '${hex}'`);
 		return [0, 0, 0];
 	}
 	return [
