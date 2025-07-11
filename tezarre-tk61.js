@@ -24,15 +24,19 @@ export function Initialize() {
 	device.log("🔧 Información del dispositivo:");
 	device.log(`🔧 Vendor ID: 0x${VendorId().toString(16).padStart(4, '0')}`);
 	device.log(`🔧 Product ID: 0x${ProductId().toString(16).padStart(4, '0')}`);
-
-	// Intentar un comando de inicialización si es necesario
+	
+	// Habilitar debugging avanzado
+	device.log("🐛 Modo debug activado");
+	device.log("🐛 Para ver logs detallados, ir a: SignalRGB > Settings > Logging > Enable Verbose Logging");
+	device.log("🐛 Los logs se guardan en: %USERPROFILE%\\AppData\\Local\\VortxData\\VortxEngine\\logs");
+	
 	device.log("🔧 Plugin inicializado correctamente");
 }
 
 export function Render() {
 	device.log("🎨 Render ciclo iniciado");
 	sendColors();
-	device.pause(3000); // Pausa de 3 segundos para observar cambios
+	device.pause(2000); // 2 segundos para observar si alguna config funciona
 }
 
 export function Shutdown(SystemSuspending) {
@@ -55,59 +59,61 @@ function sendColors(overrideColor) {
 		device.log(`🌈 Color capturado: RGB(${color[0]}, ${color[1]}, ${color[2]})`);
 	}
 
-	device.log(`📦 Preparando envío de color RGB(${color[0]}, ${color[1]}, ${color[2]})`);
+	device.log(`📦 Enviando color RGB(${color[0]}, ${color[1]}, ${color[2]})`);
 
-	// Lista de configuraciones a probar sistemáticamente
+	// Configuraciones completas basadas en análisis del mock
 	let configuraciones = [
-		// Config 1: 0x1b como Report ID + datos sin el primer 0x1b
+		// Config 1: Paquete original exacto de Wireshark
 		{
 			data: [0x1b, 0x00, 0x50, 0x70, 0x6e, 0x1b, 0x8d, 0xd5, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x09, 0x00, color[0], color[1], color[2], 0x06, 0x00, 0x04, 0x01, 0x00, 0x00, 0x00, 0x00],
-			desc: "0x1b como Report ID"
+			desc: "Wireshark exacto"
 		},
 		
-		// Config 2: Report ID 0x00 + datos completos
+		// Config 2: Con Report ID 0x00 al principio
 		{
 			data: [0x00, 0x1b, 0x00, 0x50, 0x70, 0x6e, 0x1b, 0x8d, 0xd5, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x09, 0x00, color[0], color[1], color[2], 0x06, 0x00, 0x04, 0x01, 0x00, 0x00, 0x00, 0x00],
-			desc: "Report ID 0x00 + datos completos"
+			desc: "Report ID 0x00"
 		},
 		
-		// Config 3: Datos sin ningún Report ID
+		// Config 3: Asumiendo que 0x1b ES el Report ID
 		{
 			data: [0x00, 0x50, 0x70, 0x6e, 0x1b, 0x8d, 0xd5, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x09, 0x00, color[0], color[1], color[2], 0x06, 0x00, 0x04, 0x01, 0x00, 0x00, 0x00, 0x00],
-			desc: "Sin 0x1b inicial, empezando con 0x00"
+			desc: "0x1b era Report ID"
 		},
 		
-		// Config 4: Formato simple RGB
+		// Config 4: Con Report ID 0x1B y datos reinterpretados
 		{
-			data: [0x1b, color[0], color[1], color[2], 0x00, 0x00, 0x00, 0x00],
-			desc: "Formato simple 0x1b + RGB"
+			data: [0x1b, 0x00, 0x50, 0x70, 0x6e, 0x1b, 0x8d, 0xd5, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x09, 0x00, color[0], color[1], color[2], 0x06, 0x00, 0x04, 0x01, 0x00, 0x00, 0x00, 0x00],
+			desc: "Report ID 0x1B"
 		},
 		
-		// Config 5: Padding a 32 bytes con 0x1b como Report ID
+		// Config 5: Formato simple para testing
 		{
-			data: [0x1b, 0x00, 0x50, 0x70, 0x6e, 0x1b, 0x8d, 0xd5, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x09, 0x00, color[0], color[1], color[2], 0x06, 0x00, 0x04, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00],
-			desc: "32 bytes con 0x1b como Report ID"
+			data: [0x1b, color[0], color[1], color[2], 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00],
+			desc: "Simple RGB (32 bytes)"
+		},
+		
+		// Config 6: Datos completos en 64 bytes
+		{
+			data: [0x1b, 0x00, 0x50, 0x70, 0x6e, 0x1b, 0x8d, 0xd5, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x09, 0x00, color[0], color[1], color[2], 0x06, 0x00, 0x04, 0x01, 0x00, 0x00, 0x00, 0x00, ...Array(37).fill(0x00)],
+			desc: "64 bytes padded"
 		}
 	];
 
 	for (let i = 0; i < configuraciones.length; i++) {
 		let config = configuraciones[i];
-		device.log(`🔄 [${i + 1}/${configuraciones.length}] ${config.desc}`);
-		device.log(`📦 Datos (${config.data.length} bytes): [${config.data.join(", ")}]`);
+		device.log(`🔄 [${i + 1}/${configuraciones.length}] ${config.desc} (${config.data.length} bytes)`);
 		
 		try {
 			device.write(config.data, config.data.length);
-			device.log(`✅ Config ${i + 1} completada - verificar teclado físicamente`);
-			
-			// Pausa para ver si el teclado cambió
-			device.pause(100);
-			
+			device.log(`✅ Config ${i + 1} enviada - revisar teclado`);
+			device.pause(200); // Pausa para observar cambios
 		} catch (err) {
 			device.log(`❌ Config ${i + 1} falló: ${err.message}`);
 		}
 	}
 	
-	device.log("🔍 Todas las configuraciones enviadas - verificar cuál funcionó visualmente");
+	device.log("🔍 Todas las configuraciones probadas");
 }
 
 

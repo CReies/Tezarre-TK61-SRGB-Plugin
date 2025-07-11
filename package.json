@@ -1,5 +1,28 @@
 {
+	"name": "tezarre-tk61-srgb-plugin",
+	"version": "1.0.0",
+	"description": "SignalRGB Plugin para Tezarre TK61",
+	"main": "tezarre-tk61.js",
+	"scripts": {
+		"test": "node debug-mock.js",
+		"debug": "node debug-mock.js",
+		"lint": "echo 'Checking JavaScript syntax...' && node -c tezarre-tk61.js",
+		"install-plugin": "echo 'Instalar manualmente en SignalRGB Plugins folder'",
+		"watch": "nodemon debug-mock.js"
+	},
+	"keywords": [
+		"signalrgb",
+		"rgb",
+		"keyboard",
+		"tezarre",
+		"tk61"
+	],
+	"author": "CReies",
+	"license": "MIT",
 	"dependencies": {
 		"node-hid": "^3.2.0"
+	},
+	"devDependencies": {
+		"nodemon": "^3.0.0"
 	}
 }
