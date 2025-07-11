@@ -48,22 +48,23 @@ function sendColors(overrideColor) {
 		device.log(`🌈 Color capturado: RGB(${color[0]}, ${color[1]}, ${color[2]})`);
 	}
 
+	// Paquete base capturado de Wireshark, sin los colores
 	let packet = [
-		0x00,          // padding / report ID
-		color[0],
-		color[1],
-		color[2],
-		0x00, 0x00, 0x00, 0x00
+		0x1b, 0x00, 0x50, 0x70, 0x6e, 0x1b, 0x8d, 0xd5,
+		0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x09, 0x00,
+		color[0], color[1], color[2],
+		0x06, 0x00, 0x04, 0x01, 0x00, 0x00, 0x00, 0x00
 	];
 
 	try {
-		device.send_output_report(packet, 0x00); // ⚠️ CAMBIO AQUÍ
-		device.log(`📤 Output report enviado con ID 0x00`);
-		device.log(`📦 Packet enviado: [${packet.join(", ")}]`);
+		device.write(packet);
+		device.log(`📤 Paquete enviado exitosamente`);
+		device.log(`📦 Datos: [${packet.join(", ")}]`);
 	} catch (err) {
-		device.log("❌ Error al enviar output report: " + err.message);
+		device.log("❌ Error al enviar paquete: " + err.message);
 	}
 }
+
 
 
 function hexToRgb(hex) {
