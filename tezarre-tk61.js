@@ -24,12 +24,12 @@ export function Initialize() {
 	device.log("🔧 Información del dispositivo:");
 	device.log(`🔧 Vendor ID: 0x${VendorId().toString(16).padStart(4, '0')}`);
 	device.log(`🔧 Product ID: 0x${ProductId().toString(16).padStart(4, '0')}`);
-	
+
 	// Habilitar debugging avanzado
 	device.log("🐛 Modo debug activado");
 	device.log("🐛 Para ver logs detallados, ir a: SignalRGB > Settings > Logging > Enable Verbose Logging");
 	device.log("🐛 Los logs se guardan en: %USERPROFILE%\\AppData\\Local\\VortxData\\VortxEngine\\logs");
-	
+
 	device.log("🔧 Plugin inicializado correctamente");
 }
 
@@ -61,44 +61,85 @@ function sendColors(overrideColor) {
 
 	device.log(`📦 Enviando color RGB(${color[0]}, ${color[1]}, ${color[2]})`);
 
-	// Probar diferentes Report IDs y formatos basados en Wireshark
+	// Configuraciones basadas en el controlador de OpenRGB
 	let configuraciones = [
-		// Config 1: Sin Report ID (paquete directo)
+		// Config 1: Comando de modo estático (SetMode) - según OpenRGB
 		{
-			nombre: "Paquete directo sin Report ID",
-			datos: [0x50, 0x70, 0x6e, 0x1b, 0x8d, 0xd5, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x09, 0x00, color[0], color[1], color[2], 0x06, 0x00, 0x04, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00]
-		},
-		
-		// Config 2: Report ID 0x00 como primer byte
-		{
-			nombre: "Report ID 0x00",
-			datos: [0x00, 0x50, 0x70, 0x6e, 0x1b, 0x8d, 0xd5, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x09, 0x00, color[0], color[1], color[2], 0x06, 0x00, 0x04, 0x01, 0x00, 0x00, 0x00, 0x00]
-		},
-		
-		// Config 3: Report ID 0x1B (según Analysis)
-		{
-			nombre: "Report ID 0x1B",
-			datos: [0x1b, 0x50, 0x70, 0x6e, 0x1b, 0x8d, 0xd5, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x09, 0x00, color[0], color[1], color[2], 0x06, 0x00, 0x04, 0x01, 0x00, 0x00, 0x00, 0x00]
-		},
-		
-		// Config 4: Comando corto basado en posiciones RGB
-		{
-			nombre: "Comando RGB corto",
-			datos: [0x1b, 0x09, 0x00, color[0], color[1], color[2]]
-		},
-		
-		// Config 5: Formato alternativo con header
-		{
-			nombre: "Header + RGB",
-			datos: [0x00, 0x1b, 0x09, 0x00, color[0], color[1], color[2], 0x06, 0x00, 0x04, 0x01]
-		},
-		
-		// Config 6: Paquete de 64 bytes (tamaño estándar HID)
-		{
-			nombre: "Buffer 64 bytes",
+			nombre: "Modo estático OpenRGB",
 			datos: (() => {
-				let buf = [0x1b, 0x50, 0x70, 0x6e, 0x1b, 0x8d, 0xd5, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x09, 0x00, color[0], color[1], color[2], 0x06, 0x00, 0x04, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00];
-				while (buf.length < 64) buf.push(0x00);
+				let buf = new Array(64).fill(0x00);
+				buf[0] = 0x01;  // Report ID según OpenRGB
+				buf[1] = 0x07;  // SetMode command
+				buf[6] = 0x00;  // CLASSIC_CONST_MODE_VALUE (static)
+				buf[7] = 0x04;  // brightness max
+				buf[8] = 0x02;  // speed medium
+				buf[9] = color[0];   // R
+				buf[10] = color[1];  // G
+				buf[11] = color[2];  // B
+				buf[15] = 0x00; // direction
+				buf[16] = 0x00; // not random
+				return buf;
+			})()
+		},
+
+		// Config 2: Comando de LEDs individuales (SetLEDsData) - según OpenRGB
+		{
+			nombre: "LEDs individuales OpenRGB",
+			datos: (() => {
+				let buf = new Array(64).fill(0x00);
+				buf[0] = 0x01;  // Report ID
+				buf[1] = 0x0F;  // SetLEDsData command
+				buf[4] = 0x00;  // package number
+				buf[5] = 0x36;  // package size
+				// Llenar múltiples posiciones LED con el mismo color
+				for (let i = 6; i < 64; i += 3) {
+					buf[i] = color[0];     // R
+					buf[i + 1] = color[1]; // G
+					buf[i + 2] = color[2]; // B
+				}
+				return buf;
+			})()
+		},
+
+		// Config 3: Comando simple de test
+		{
+			nombre: "Comando simple RGB",
+			datos: [0x01, 0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x02, color[0], color[1], color[2]]
+		},
+
+		// Config 4: Nuestro paquete original de Wireshark con Report ID correcto
+		{
+			nombre: "Wireshark con Report ID 0x01",
+			datos: [0x01, 0x50, 0x70, 0x6e, 0x1b, 0x8d, 0xd5, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x09, 0x00, color[0], color[1], color[2], 0x06, 0x00, 0x04, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00]
+		},
+
+		// Config 5: Modo breath con color
+		{
+			nombre: "Modo breath OpenRGB",
+			datos: (() => {
+				let buf = new Array(64).fill(0x00);
+				buf[0] = 0x01;  // Report ID
+				buf[1] = 0x07;  // SetMode command
+				buf[6] = 0x01;  // CLASSIC_BREATHE_MODE_VALUE
+				buf[7] = 0x04;  // brightness max
+				buf[8] = 0x02;  // speed medium
+				buf[9] = color[0];   // R
+				buf[10] = color[1];  // G
+				buf[11] = color[2];  // B
+				return buf;
+			})()
+		},
+
+		// Config 6: Comando personalizado custom mode
+		{
+			nombre: "Modo custom OpenRGB",
+			datos: (() => {
+				let buf = new Array(64).fill(0x00);
+				buf[0] = 0x01;  // Report ID
+				buf[1] = 0x07;  // SetMode command
+				buf[6] = 0x0A;  // CLASSIC_CUSTOM_MODE_VALUE
+				buf[7] = 0x04;  // brightness max
+				buf[8] = 0x00;  // speed
 				return buf;
 			})()
 		}
@@ -109,33 +150,32 @@ function sendColors(overrideColor) {
 		let config = configuraciones[i];
 		device.log(`🔄 Probando: ${config.nombre} (${config.datos.length} bytes)`);
 		device.log(`📊 Datos: [${config.datos.slice(0, 10).map(x => '0x' + x.toString(16).padStart(2, '0')).join(', ')}...]`);
-		
+
 		try {
 			// Intentar escribir especificando la longitud
 			device.write(config.datos, config.datos.length);
 			device.log(`✅ ${config.nombre} - write() exitoso`);
-			
+
 			// Pausa para observar efecto físico
 			device.pause(1000);
 			device.log(`🔍 ¿Cambió el color del teclado? Si SÍ cambió, reportar esta configuración`);
-			
+
 			// No hacer return aquí - probar TODAS las configuraciones para ver cuál funciona
-			
+
 		} catch (err) {
 			device.log(`❌ ${config.nombre}: ${err.message}`);
 		}
-		
+
 		// Pausa entre intentos para observar cambios
 		device.pause(500);
 	}
-	
+
 	device.log("🔚 Fin de pruebas - revisar cuál configuración cambió el color del teclado");
-	device.log("🔚 Fin de pruebas - revisar cuál configuración cambió el color del teclado");
-	device.log("💡 Sugerencias adicionales:");
-	device.log("💡 1. Verificar si el teclado está en modo RGB correcto");
-	device.log("💡 2. Probar con software original del fabricante primero");
-	device.log("💡 3. Capturar más paquetes Wireshark durante cambios de color");
-	device.log("💡 4. Si ninguna funciona, puede que necesite un comando de 'activación' primero");
+	device.log(" Sugerencias adicionales:");
+	device.log("💡 1. Si 'Modo estático OpenRGB' funciona, usar esa configuración");
+	device.log("💡 2. Si 'LEDs individuales OpenRGB' funciona, implementar control por LED");
+	device.log("💡 3. Verificar que el teclado esté conectado y encendido");
+	device.log("💡 4. Probar primero con el software original para activar RGB");
 }
 
 function hexToRgb(hex) {
