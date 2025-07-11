@@ -1,5 +1,5 @@
 module.exports = function ({ signal }) {
-	const myKeyboard = require('./deviceHandlers/tezarre-tk61.mjs');
+	const teclado = require('./deviceHandlers/tezarre-tk61.js');
 
 	signal.on('start', async () => {
 		console.log("🟢 Plugin arrancó");
@@ -13,6 +13,6 @@ module.exports = function ({ signal }) {
 	});
 
 	signal.on('stop', () => {
-		myKeyboard.cleanup();
+		teclado.cleanup();
 	});
 };
