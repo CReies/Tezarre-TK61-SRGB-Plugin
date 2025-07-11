@@ -7,7 +7,7 @@ export function Size() { return [14, 5]; }
 export function DefaultPosition() { return [240, 120]; }
 export function DefaultScale() { return 8.0; }
 export function DeviceType() { return "keyboard"; }
-export function ImageUrl() { return "assets/tezarre-tk61.png"; }
+export function ImageUrl() { return "https://github.com/CReies/Tezarre-TK61-SRGB-Plugin/blob/main/assets/tezarre-tk61.png?raw=true"; }
 
 // TK61 60% layout - based on official Nuvoton plugin
 let vLedNames = [
